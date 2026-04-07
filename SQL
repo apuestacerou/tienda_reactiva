@@ -1,0 +1,77 @@
+erDiagram
+    USERS ||--o{ ADDRESSES : has
+    USERS ||--o{ ORDERS : places
+    CATEGORIES ||--o{ PRODUCTS : contains
+    PRODUCTS ||--o{ ORDER_ITEMS : "ordered in"
+    ORDERS ||--o{ ORDER_ITEMS : contains
+    
+    USERS {
+        UUID id PK
+        VARCHAR email UK
+        VARCHAR password_hash
+        VARCHAR full_name
+        VARCHAR role
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+    
+    CATEGORIES {
+        UUID id PK
+        VARCHAR name
+        VARCHAR slug UK
+        TIMESTAMPTZ created_at
+    }
+    
+    PRODUCTS {
+        UUID id PK
+        VARCHAR name
+        VARCHAR description
+        NUMERIC price
+        INTEGER stock
+        VARCHAR image_path
+        UUID category_id FK
+        VARCHAR sku UK
+        BOOLEAN is_active
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+    
+    ADDRESSES {
+        UUID id PK
+        UUID user_id FK
+        VARCHAR label
+        VARCHAR line1
+        VARCHAR line2
+        VARCHAR city
+        VARCHAR region
+        VARCHAR postal_code
+        VARCHAR country
+        VARCHAR phone
+        BOOLEAN is_default
+        TIMESTAMPTZ created_at
+    }
+    
+    ORDERS {
+        UUID id PK
+        UUID user_id FK
+        VARCHAR status
+        NUMERIC total_amount
+        VARCHAR shipping_name
+        VARCHAR shipping_line1
+        VARCHAR shipping_city
+        VARCHAR shipping_region
+        VARCHAR shipping_postal
+        VARCHAR shipping_country
+        VARCHAR notes
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+    
+    ORDER_ITEMS {
+        UUID id PK
+        UUID order_id FK
+        UUID product_id FK
+        INTEGER quantity
+        NUMERIC unit_price
+        NUMERIC line_total
+    }
