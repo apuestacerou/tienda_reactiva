@@ -4,112 +4,120 @@ Spring Boot **WebFlux** + **R2DBC** + **PostgreSQL (Neon)** + React (Vite). Arqu
 
 Repositorio: [github.com/apuestacerou/tienda_reactiva](https://github.com/apuestacerou/tienda_reactiva)
 
-**No hay base en memoria:** la app solo se conecta a Neon. Las credenciales van en **`application-local.yml`** (junto al `pom.xml`), que **no** se sube a git.
+**No hay base en memoria:** solo **Neon** (PostgreSQL). Las credenciales van en **`application-local.yml`** (junto al `pom.xml`). Ese archivo **no** se sube a git; en el repo viene **`application-local.yml.example`** para copiarlo y editarlo.
+
+La interfaz compilada está en **`src/main/resources/static/`** (generada con `npm run build` en `frontend/`). Así puedes abrir la tienda en **`http://localhost:8080`** con solo el backend en marcha. Si desarrollas el front, usa Vite en el puerto 5173 (ver más abajo).
+
+---
+
+## Cómo ejecutarlo si acabas de clonar el repo
+
+1. **Requisitos:** JDK 21, Node.js 18+ (solo si vas a desarrollar el frontend o a regenerar la SPA), cuenta en [Neon](https://neon.tech) con un proyecto PostgreSQL.
+
+2. **Clonar e ir a la raíz del backend** (donde está `pom.xml`):
+   ```powershell
+   git clone https://github.com/apuestacerou/tienda_reactiva.git
+   cd tienda_reactiva
+   ```
+
+3. **Crear `application-local.yml`** (obligatorio para arrancar la API):
+   ```powershell
+   copy application-local.yml.example application-local.yml
+   ```
+   Edita `application-local.yml` y pon **URL R2DBC**, **usuario** y **contraseña** de Neon (host del pooler, base `neondb` o la que uses).
+
+4. **Primera vez en Neon:** si la base ya existía sin categorías o sin columna `category_id` en `products`, ejecuta en el SQL Editor los scripts que apliquen en `scripts/` (por ejemplo `migrate-add-categories-products-fk.sql` y, si hace falta, `migrate-users-role-cliente-administrador.sql`).
+
+5. **Levantar el backend:**
+   ```powershell
+   .\mvnw-local.cmd spring-boot:run
+   ```
+   - API: **http://localhost:8080**
+   - Con la SPA incluida en el repo: abre **http://localhost:8080** en el navegador (misma app que en Vite, pero servida por Spring).
+
+6. **Opcional — desarrollo del frontend con recarga rápida:** en otra terminal:
+   ```powershell
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   Abre **http://localhost:5173/** (Vite envía `/api` al 8080).
 
 ---
 
 ## Requisitos
 
 | Herramienta | Versión |
-|--------------|---------|
+|-------------|---------|
 | **JDK** | 21 (`JAVA_HOME` apuntando al JDK) |
-| **Node.js** | 18 o superior (para el frontend) |
+| **Node.js** | 18 o superior (para `frontend/`: desarrollo o regenerar la SPA) |
 | **Maven** | Incluido vía `mvnw` / `mvnw.cmd` |
-| **Neon** | Proyecto PostgreSQL con cadena de conexión (pooler recomendado) |
+| **Neon** | Proyecto PostgreSQL (pooler recomendado) |
 
 ---
 
-## 1. Clonar el proyecto
-
-```powershell
-git clone https://github.com/apuestacerou/tienda_reactiva.git
-cd tienda_reactiva
-```
-
-Entra al directorio donde está el `pom.xml` (raíz del backend).
-
----
-
-## 2. Configurar Neon (`application-local.yml`)
+## Configuración detallada de Neon (`application-local.yml`)
 
 En la **misma carpeta que `pom.xml`**:
 
-1. Copia la plantilla:
-   ```powershell
-   copy application-local.yml.example application-local.yml
-   ```
-2. Edita **`application-local.yml`** y pon tu host pooler de Neon, usuario y contraseña:
-   - URL **R2DBC:** `r2dbc:postgresql://HOST:5432/neondb?sslmode=require` (no uses el `postgresql://` JDBC del portapapeles tal cual).
-   - `username` / `password` aparte de la URL.
+1. Copia la plantilla: `copy application-local.yml.example application-local.yml`
+2. Edita **`application-local.yml`**: URL **R2DBC** `r2dbc:postgresql://HOST:5432/neondb?sslmode=require`, `username` y `password`.
 
-Ese archivo está en **`.gitignore`**: no se commitea.
+Opcional: **`TIENDA_JWT_SECRET`** (≥ 32 caracteres) en servidores reales.
 
-Opcional: variable de entorno **`TIENDA_JWT_SECRET`** (≥ 32 caracteres) en servidores reales.
+Al arrancar, `schema.sql` se aplica vía R2DBC (`CREATE TABLE IF NOT EXISTS`, …).
 
-Al arrancar, `schema.sql` se aplica vía R2DBC (`CREATE TABLE IF NOT EXISTS`, …). También puedes usar los scripts en `scripts/`.
-
-**Roles en `users.role`:** `CLIENTE` (por defecto al registrarse) o `ADMINISTRADOR`. Para promover a admin desde Neon: `UPDATE users SET role = 'ADMINISTRADOR' WHERE email = '...';`. Si tu BD ya tenía `CUSTOMER`/`ADMIN`, ejecuta una vez `scripts/migrate-users-role-cliente-administrador.sql` en el SQL Editor de Neon.
+**Roles:** `CLIENTE` (por defecto al registrarse) o `ADMINISTRADOR`. Promover en Neon: `UPDATE users SET role = 'ADMINISTRADOR' WHERE email = '...';`. Si migras desde `CUSTOMER`/`ADMIN`, usa `scripts/migrate-users-role-cliente-administrador.sql`.
 
 ---
 
-## 3. Ejecutar el backend (API)
+## Ejecutar solo el backend (API + UI embebida)
 
 ```powershell
-cd c:\ruta\al\proyecto
 .\mvnw-local.cmd spring-boot:run
 ```
 
-`mvnw-local.cmd` comprueba que exista **`application-local.yml`** antes de `spring-boot:run` (si falta, muestra cómo crearlo). Para **tests** puedes usar `.\mvnw.cmd test` sin ese archivo.
-
-(O `.\mvnw.cmd spring-boot:run` si `JAVA_HOME` está bien y ya tienes `application-local.yml`; sin él la app no tendrá URL R2DBC.)
-
-- API: **`http://localhost:8080`**
-- En consola debería loguearse que R2DBC usa PostgreSQL (Neon).
-
-**No cierres esta terminal** mientras pruebas el frontend.
+`mvnw-local.cmd` exige **`application-local.yml`** antes de `spring-boot:run`. Para **tests** sin Neon: `.\mvnw.cmd test` (el test de contexto completo se omite si no existe `application-local.yml`).
 
 ---
 
-## 4. Ejecutar el frontend
+## Regenerar la SPA en el JAR (tras cambiar `frontend/`)
 
 ```powershell
 cd frontend
 npm install
-npm run dev
+npm run build
+cd ..
 ```
 
-- **`http://localhost:5173/`** — Vite hace proxy de `/api` a `http://localhost:8080`.
-
-Rutas (HashRouter): `#/`, `#/cart`, `#/login`, `#/register`, `#/checkout`.
+Eso vuelve a generar `src/main/resources/static/`. Luego `.\mvnw.cmd package` para empaquetar.
 
 ---
 
-## 5. Pruebas (Maven)
+## Pruebas (Maven)
 
 ```powershell
 .\mvnw.cmd test
 ```
 
-`ReactivaApplicationTests` (contexto completo con Neon) **solo se ejecuta** si existe **`application-local.yml`** en la raíz del módulo. Sin ese archivo (p. ej. en CI), se **omite**; el resto de tests siguen.
-
 ---
 
-## 6. Empaquetar la SPA en el JAR (opcional)
+## Empaquetar JAR (producción local)
 
 ```powershell
 cd frontend
 npm run build
 cd ..
-.\mvnw.cmd package
+.\mvnw.cmd package -DskipTests
 ```
 
-Si no tienes Neon en el entorno de build, usa `.\mvnw.cmd package -DskipTests`.
+Si no tienes `application-local.yml` en la máquina de build, `-DskipTests` evita el test que levanta contexto contra Neon.
 
 ---
 
 ## Pendientes / operación
 
-- Tablas y datos en Neon (`products`, `users`, pedidos).
+- Datos en Neon (`products`, `users`, categorías, pedidos).
 - `TIENDA_JWT_SECRET` en despliegue.
 - CORS si front y API van en dominios distintos.
 - `tienda.uploads.dir` en servidor para imágenes.
@@ -122,10 +130,11 @@ Si no tienes Neon en el entorno de build, usa `.\mvnw.cmd package -DskipTests`.
 |--------|------|--------|
 | GET | `/api/products` | Catálogo |
 | GET | `/api/products/{id}` | Detalle |
+| GET | `/api/categories` | Categorías |
 | POST | `/api/auth/register` | JSON `{ email, password, fullName }` |
-| POST | `/api/auth/login` | JSON `{ email, password }` → `token` |
-| POST | `/api/orders` | `Authorization: Bearer <token>`; `{ items: [{ productId, quantity }] }` |
-| POST | `/api/products` | Multipart: nombre, precio, stock, imagen opcional |
+| POST | `/api/auth/login` | JSON `{ email, password }` → `token`, `role` |
+| POST | `/api/orders` | `Authorization: Bearer <token>` |
+| POST/PUT/DELETE | `/api/products` | CRUD multipart (solo **ADMINISTRADOR**) |
 
 Imágenes: `GET /api/files/{nombre}` — subidas en `uploads/productos/` (ignorado en git).
 
