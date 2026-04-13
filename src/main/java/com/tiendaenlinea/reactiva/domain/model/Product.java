@@ -12,8 +12,16 @@ public final class Product {
 	private final BigDecimal price;
 	private final int stock;
 	private final String imagePath;
+	private final UUID categoryId;
 
-	public Product(UUID id, String name, String description, BigDecimal price, int stock, String imagePath) {
+	public Product(
+			UUID id,
+			String name,
+			String description,
+			BigDecimal price,
+			int stock,
+			String imagePath,
+			UUID categoryId) {
 		this.id = Objects.requireNonNull(id);
 		this.name = Objects.requireNonNull(name, "name");
 		this.description = description != null ? description : "";
@@ -26,18 +34,25 @@ public final class Product {
 		}
 		this.stock = stock;
 		this.imagePath = imagePath;
+		this.categoryId = categoryId;
 	}
 
-	public static Product nuevo(String name, String description, BigDecimal price, int stock, String imagePath) {
-		return new Product(UUID.randomUUID(), name, description, price, stock, imagePath);
+	public static Product nuevo(
+			String name,
+			String description,
+			BigDecimal price,
+			int stock,
+			String imagePath,
+			UUID categoryId) {
+		return new Product(UUID.randomUUID(), name, description, price, stock, imagePath, categoryId);
 	}
 
 	public Product withStock(int newStock) {
-		return new Product(id, name, description, price, newStock, imagePath);
+		return new Product(id, name, description, price, newStock, imagePath, categoryId);
 	}
 
 	public Product withImagePath(String newImagePath) {
-		return new Product(id, name, description, price, stock, newImagePath);
+		return new Product(id, name, description, price, stock, newImagePath, categoryId);
 	}
 
 	public UUID getId() {
@@ -62,5 +77,9 @@ public final class Product {
 
 	public String getImagePath() {
 		return imagePath;
+	}
+
+	public UUID getCategoryId() {
+		return categoryId;
 	}
 }

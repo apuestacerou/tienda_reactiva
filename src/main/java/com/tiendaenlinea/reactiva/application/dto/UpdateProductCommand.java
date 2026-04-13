@@ -1,6 +1,7 @@
 package com.tiendaenlinea.reactiva.application.dto;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -12,6 +13,7 @@ public record UpdateProductCommand(
 		@NotBlank @Size(max = 255) String name,
 		@Size(max = 4000) String description,
 		@NotNull @DecimalMin(value = "0.0", inclusive = true) BigDecimal price,
-		@NotNull @Min(0) Integer stock
+		@NotNull @Min(0) Integer stock,
+		UUID categoryId
 ) {
 }

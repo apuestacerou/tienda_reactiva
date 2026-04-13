@@ -2,9 +2,11 @@ HELP.md
 .env
 .env.*
 !.env.example
+application-local.yml
 target/
 frontend/node_modules/
 uploads/
+src/main/resources/static/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

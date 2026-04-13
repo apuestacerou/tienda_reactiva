@@ -1,18 +1,23 @@
 package com.tiendaenlinea.reactiva.application.service;
 
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.tiendaenlinea.reactiva.application.dto.CreateProductCommand;
 import com.tiendaenlinea.reactiva.application.dto.ProductResponse;
 import com.tiendaenlinea.reactiva.application.dto.UpdateProductCommand;
+import com.tiendaenlinea.reactiva.domain.model.Category;
 import com.tiendaenlinea.reactiva.domain.model.Product;
+import com.tiendaenlinea.reactiva.domain.port.CategoryRepositoryPort;
 import com.tiendaenlinea.reactiva.domain.port.ProductImageStoragePort;
 import com.tiendaenlinea.reactiva.domain.port.ProductRepositoryPort;
 
@@ -27,14 +32,17 @@ public class ProductApplicationService {
 	private static final Logger log = LoggerFactory.getLogger(ProductApplicationService.class);
 
 	private final ProductRepositoryPort productRepository;
+	private final CategoryRepositoryPort categoryRepository;
 	private final ProductImageStoragePort imageStorage;
 	private final String publicFilesBasePath;
 
 	public ProductApplicationService(
 			ProductRepositoryPort productRepository,
+			CategoryRepositoryPort categoryRepository,
 			ProductImageStoragePort imageStorage,
 			@Value("${tienda.public-files-base:/api/files}") String publicFilesBasePath) {
 		this.productRepository = productRepository;
+		this.categoryRepository = categoryRepository;
 		this.imageStorage = imageStorage;
 		this.publicFilesBasePath = publicFilesBasePath.endsWith("/")
 				? publicFilesBasePath.substring(0, publicFilesBasePath.length() - 1)
@@ -45,16 +53,16 @@ public class ProductApplicationService {
 			@Valid CreateProductCommand cmd,
 			Mono<byte[]> contenidoImagen,
 			String nombreArchivoOriginal) {
-		// filter: solo bytes no vacíos; flatMap: guardar archivo y persistir; switchIfEmpty: sin imagen
-		return contenidoImagen
-				.filter(b -> b != null && b.length > 0)
-				.flatMap(bytes -> imageStorage.save(bytes, nombreSafe(nombreArchivoOriginal))
-						.doOnNext(path -> log.debug("Imagen almacenada: {}", path)))
-				.flatMap(path -> guardarNuevo(cmd, path))
-				.switchIfEmpty(Mono.defer(() -> guardarNuevo(cmd, null)))
-				.doOnSuccess(r -> log.debug("Producto creado id={}", r.id()))
-				.doOnError(e -> log.warn("Error al crear producto: {}", e.toString()))
-				.checkpoint("crear-producto", true);
+		return validateCategory(cmd.categoryId())
+				.then(Mono.defer(() -> contenidoImagen
+						.filter(b -> b != null && b.length > 0)
+						.flatMap(bytes -> imageStorage.save(bytes, nombreSafe(nombreArchivoOriginal))
+								.doOnNext(path -> log.debug("Imagen almacenada: {}", path)))
+						.flatMap(path -> guardarNuevo(cmd, path))
+						.switchIfEmpty(Mono.defer(() -> guardarNuevo(cmd, null)))
+						.doOnSuccess(r -> log.debug("Producto creado id={}", r.id()))
+						.doOnError(e -> log.warn("Error al crear producto: {}", e.toString()))
+						.checkpoint("crear-producto", true)));
 	}
 
 	public Mono<ProductResponse> actualizar(
@@ -62,22 +70,42 @@ public class ProductApplicationService {
 			@Valid UpdateProductCommand cmd,
 			Mono<byte[]> contenidoImagenNueva,
 			String nombreArchivoOriginal) {
-		return productRepository.findById(id)
-				.switchIfEmpty(Mono.error(new NoSuchElementException("Producto no encontrado: " + id)))
-				.flatMap(existente -> contenidoImagenNueva
-						.filter(b -> b != null && b.length > 0)
-						.flatMap(bytes -> reemplazarImagen(existente, bytes, nombreSafe(nombreArchivoOriginal)))
-						.switchIfEmpty(Mono.just(existente))
-						.map(p -> aplicarDatos(p, cmd))
-						.flatMap(productRepository::save)
-						.map(this::toResponse)
-						.doOnNext(r -> log.debug("Producto actualizado id={}", r.id())))
-				.checkpoint("actualizar-producto", true);
+		return validateCategory(cmd.categoryId())
+				.then(Mono.defer(() -> productRepository.findById(id)
+						.switchIfEmpty(Mono.error(new NoSuchElementException("Producto no encontrado: " + id)))
+						.flatMap(existente -> contenidoImagenNueva
+								.filter(b -> b != null && b.length > 0)
+								.flatMap(bytes -> reemplazarImagen(existente, bytes, nombreSafe(nombreArchivoOriginal)))
+								.switchIfEmpty(Mono.just(existente))
+								.map(p -> aplicarDatos(p, cmd))
+								.flatMap(productRepository::save)
+								.flatMap(this::toResponseWithCategory)
+								.doOnNext(r -> log.debug("Producto actualizado id={}", r.id())))
+						.checkpoint("actualizar-producto", true)));
 	}
 
 	public Flux<ProductResponse> listarTodos() {
 		return productRepository.findAllOrderByName()
-				.map(this::toResponse)
+				.collectList()
+				.flatMapMany(list -> {
+					if (list.isEmpty()) {
+						return Flux.empty();
+					}
+					var catIds = list.stream()
+							.map(Product::getCategoryId)
+							.filter(Objects::nonNull)
+							.distinct()
+							.toList();
+					if (catIds.isEmpty()) {
+						return Flux.fromIterable(list).map(p -> toResponse(p, null));
+					}
+					return categoryRepository.findAllById(catIds)
+							.collectMap(Category::getId)
+							.flatMapMany(map -> Flux.fromIterable(list).map(p -> {
+								Category c = p.getCategoryId() != null ? map.get(p.getCategoryId()) : null;
+								return toResponse(p, c != null ? c.getName() : null);
+							}));
+				})
 				.name("catalogo-productos")
 				.doOnSubscribe(s -> log.debug("Suscripción al listado de productos"))
 				.doOnComplete(() -> log.trace("Listado completado"))
@@ -87,7 +115,7 @@ public class ProductApplicationService {
 	public Mono<ProductResponse> obtenerPorId(UUID id) {
 		return productRepository.findById(id)
 				.switchIfEmpty(Mono.error(new NoSuchElementException("Producto no encontrado: " + id)))
-				.map(this::toResponse)
+				.flatMap(this::toResponseWithCategory)
 				.doOnNext(r -> log.debug("Obtenido producto id={}", r.id()))
 				.checkpoint("obtener-por-id", true);
 	}
@@ -105,6 +133,24 @@ public class ProductApplicationService {
 				.checkpoint("eliminar-producto", true);
 	}
 
+	private Mono<Void> validateCategory(UUID categoryId) {
+		if (categoryId == null) {
+			return Mono.empty();
+		}
+		return categoryRepository.findById(categoryId)
+				.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Categoria no encontrada")))
+				.then();
+	}
+
+	private Mono<ProductResponse> toResponseWithCategory(Product p) {
+		if (p.getCategoryId() == null) {
+			return Mono.just(toResponse(p, null));
+		}
+		return categoryRepository.findById(p.getCategoryId())
+				.map(c -> toResponse(p, c.getName()))
+				.switchIfEmpty(Mono.fromCallable(() -> toResponse(p, null)));
+	}
+
 	private Mono<Product> reemplazarImagen(Product existente, byte[] bytes, String filename) {
 		Mono<Void> borrarAnterior = existente.getImagePath() != null
 				? imageStorage.deleteIfExists(existente.getImagePath())
@@ -120,20 +166,29 @@ public class ProductApplicationService {
 				cmd.description(),
 				cmd.price(),
 				cmd.stock(),
-				p.getImagePath());
+				p.getImagePath(),
+				cmd.categoryId());
 	}
 
 	private Mono<ProductResponse> guardarNuevo(CreateProductCommand cmd, String imagePath) {
-		Product nuevo = Product.nuevo(cmd.name(), cmd.description(), cmd.price(), cmd.stock(), imagePath);
-		return productRepository.save(nuevo).map(this::toResponse);
+		Product nuevo = Product.nuevo(cmd.name(), cmd.description(), cmd.price(), cmd.stock(), imagePath, cmd.categoryId());
+		return productRepository.save(nuevo).flatMap(this::toResponseWithCategory);
 	}
 
-	private ProductResponse toResponse(Product p) {
+	private ProductResponse toResponse(Product p, String categoryName) {
 		String url = null;
 		if (p.getImagePath() != null && !p.getImagePath().isBlank()) {
 			url = publicFilesBasePath + "/" + p.getImagePath();
 		}
-		return new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getStock(), url);
+		return new ProductResponse(
+				p.getId(),
+				p.getName(),
+				p.getDescription(),
+				p.getPrice(),
+				p.getStock(),
+				url,
+				p.getCategoryId(),
+				categoryName);
 	}
 
 	private static String nombreSafe(String original) {

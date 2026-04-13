@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { ADMIN_ROLE, useAuth } from '../context/AuthContext'
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -18,8 +18,9 @@ export function LoginPage() {
     setError(null)
     setLoading(true)
     try {
-      await login(email, password)
-      navigate(next.startsWith('/') ? next : `/${next}`, { replace: true })
+      const role = await login(email, password)
+      const dest = role === ADMIN_ROLE ? '/admin' : next.startsWith('/') ? next : `/${next}`
+      navigate(dest, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al entrar')
     } finally {

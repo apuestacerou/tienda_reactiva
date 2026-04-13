@@ -21,7 +21,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.tiendaenlinea.reactiva.application.dto.CreateProductCommand;
 import com.tiendaenlinea.reactiva.application.dto.ProductResponse;
 import com.tiendaenlinea.reactiva.application.dto.UpdateProductCommand;
+import com.tiendaenlinea.reactiva.domain.model.Category;
 import com.tiendaenlinea.reactiva.domain.model.Product;
+import com.tiendaenlinea.reactiva.domain.port.CategoryRepositoryPort;
 import com.tiendaenlinea.reactiva.domain.port.ProductImageStoragePort;
 import com.tiendaenlinea.reactiva.domain.port.ProductRepositoryPort;
 
@@ -38,23 +40,27 @@ class ProductApplicationServiceTest {
 	private ProductRepositoryPort productRepository;
 
 	@Mock
+	private CategoryRepositoryPort categoryRepository;
+
+	@Mock
 	private ProductImageStoragePort imageStorage;
 
 	private ProductApplicationService service;
 
 	private final UUID id = UUID.fromString("11111111-1111-1111-1111-111111111111");
+	private final UUID catId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 
 	private Product producto;
 
 	@BeforeEach
 	void setUp() {
-		service = new ProductApplicationService(productRepository, imageStorage, FILES_BASE);
-		producto = new Product(id, "Teclado", "Mecánico", new BigDecimal("99.99"), 5, "f1.jpg");
+		service = new ProductApplicationService(productRepository, categoryRepository, imageStorage, FILES_BASE);
+		producto = new Product(id, "Teclado", "Mecánico", new BigDecimal("99.99"), 5, "f1.jpg", null);
 	}
 
 	@Test
-	@DisplayName("listarTodos: Flux map — emite ProductResponse por cada producto")
-	void listarTodos_emiteRespuestas() {
+	@DisplayName("listarTodos: sin categoría — categoryName null")
+	void listarTodos_sinCategoria() {
 		when(productRepository.findAllOrderByName()).thenReturn(Flux.just(producto));
 
 		StepVerifier.create(service.listarTodos())
@@ -62,6 +68,25 @@ class ProductApplicationServiceTest {
 					assertThat(r.id()).isEqualTo(id);
 					assertThat(r.name()).isEqualTo("Teclado");
 					assertThat(r.imageUrl()).isEqualTo(FILES_BASE + "/f1.jpg");
+					assertThat(r.categoryId()).isNull();
+					assertThat(r.categoryName()).isNull();
+				})
+				.verifyComplete();
+
+		verify(categoryRepository, never()).findAllById(any());
+	}
+
+	@Test
+	@DisplayName("listarTodos: con categoría — resuelve nombre")
+	void listarTodos_conCategoria() {
+		var conCat = new Product(id, "Teclado", "Mecánico", new BigDecimal("99.99"), 5, "f1.jpg", catId);
+		when(productRepository.findAllOrderByName()).thenReturn(Flux.just(conCat));
+		when(categoryRepository.findAllById(any())).thenReturn(Flux.just(new Category(catId, "Electrónica", "electronica")));
+
+		StepVerifier.create(service.listarTodos())
+				.assertNext(r -> {
+					assertThat(r.categoryId()).isEqualTo(catId);
+					assertThat(r.categoryName()).isEqualTo("Electrónica");
 				})
 				.verifyComplete();
 	}
@@ -89,7 +114,7 @@ class ProductApplicationServiceTest {
 	@Test
 	@DisplayName("crear sin imagen: switchIfEmpty + defer — no llama a imageStorage.save")
 	void crear_sinImagen() {
-		var cmd = new CreateProductCommand("A", "d", new BigDecimal("10"), 1);
+		var cmd = new CreateProductCommand("A", "d", new BigDecimal("10"), 1, null);
 		when(productRepository.save(any(Product.class))).thenAnswer(inv -> Mono.just(inv.getArgument(0)));
 
 		StepVerifier.create(service.crear(cmd, Mono.empty(), ""))
@@ -102,7 +127,7 @@ class ProductApplicationServiceTest {
 	@Test
 	@DisplayName("crear con imagen: flatMap encadena save de archivo y persistencia")
 	void crear_conImagen() {
-		var cmd = new CreateProductCommand("B", "d", new BigDecimal("20"), 2);
+		var cmd = new CreateProductCommand("B", "d", new BigDecimal("20"), 2, null);
 		when(imageStorage.save(any(), eq("foto.png"))).thenReturn(Mono.just("uuid.png"));
 		when(productRepository.save(any(Product.class))).thenAnswer(inv -> Mono.just(inv.getArgument(0)));
 
@@ -129,7 +154,7 @@ class ProductApplicationServiceTest {
 	@Test
 	@DisplayName("actualizar: sin imagen nueva mantiene path y aplica comando")
 	void actualizar_sinNuevaImagen() {
-		var cmd = new UpdateProductCommand("Nuevo", "desc", new BigDecimal("50"), 1);
+		var cmd = new UpdateProductCommand("Nuevo", "desc", new BigDecimal("50"), 1, null);
 		when(productRepository.findById(id)).thenReturn(Mono.just(producto));
 		when(productRepository.save(any(Product.class))).thenAnswer(inv -> Mono.just(inv.getArgument(0)));
 

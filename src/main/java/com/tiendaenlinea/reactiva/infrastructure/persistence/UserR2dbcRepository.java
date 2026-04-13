@@ -9,6 +9,6 @@ import reactor.core.publisher.Mono;
 
 public interface UserR2dbcRepository extends ReactiveCrudRepository<UserEntity, UUID> {
 
-	@Query("SELECT * FROM users WHERE email = :email")
+	@Query("SELECT * FROM users WHERE email = :email LIMIT 1")
 	Mono<UserEntity> findByEmail(String email);
 }

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, email, logout } = useAuth()
+  const { isAuthenticated, isAdmin, email, logout } = useAuth()
 
   return (
     <>
@@ -15,6 +15,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <nav>
           <Link to="/">Catálogo</Link>
           <Link to="/cart">Carrito</Link>
+          {isAdmin && (
+            <Link to="/admin" style={{ fontWeight: 700 }}>
+              Administración
+            </Link>
+          )}
           {isAuthenticated ? (
             <>
               <span style={{ opacity: 0.9 }}>{email}</span>

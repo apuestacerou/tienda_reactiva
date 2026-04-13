@@ -38,7 +38,7 @@ class ProductControllerWebFluxTest {
 	@DisplayName("GET /api/products — WebFlux devuelve JSON (Flux)")
 	void listar_ok() {
 		when(productApplicationService.listarTodos()).thenReturn(Flux.just(
-				new ProductResponse(ID, "P", "d", new BigDecimal("1"), 1, null)));
+				new ProductResponse(ID, "P", "d", new BigDecimal("1"), 1, null, null, null)));
 
 		webTestClient.get()
 				.uri("/api/products")
@@ -54,7 +54,7 @@ class ProductControllerWebFluxTest {
 	@DisplayName("GET /api/products/{id} — Mono<ProductResponse>")
 	void obtener_ok() {
 		when(productApplicationService.obtenerPorId(ID)).thenReturn(Mono.just(
-				new ProductResponse(ID, "Uno", "", new BigDecimal("9.99"), 3, "/api/files/x.jpg")));
+				new ProductResponse(ID, "Uno", "", new BigDecimal("9.99"), 3, "/api/files/x.jpg", null, null)));
 
 		webTestClient.get()
 				.uri("/api/products/" + ID)

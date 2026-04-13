@@ -5,12 +5,22 @@ export interface ProductResponse {
   price: number
   stock: number
   imageUrl: string | null
+  categoryId?: string | null
+  categoryName?: string | null
+}
+
+export interface CategoryResponse {
+  id: string
+  name: string
+  slug: string
 }
 
 export interface AuthResponse {
   token: string
   userId: string
   email: string
+  /** CLIENTE | ADMINISTRADOR (según Neon / registro) */
+  role: string
 }
 
 export interface CartLine {

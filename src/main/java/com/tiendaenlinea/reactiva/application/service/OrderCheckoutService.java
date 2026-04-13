@@ -56,6 +56,7 @@ public class OrderCheckoutService {
 					order.setStatus("PENDING");
 					order.setTotalAmount(total);
 					order.setCreatedAt(Instant.now());
+					order.markNewRow();
 					return orderRepository.save(order)
 							.flatMap(o -> guardarLineas(o.getId(), lineas).then(actualizarStocks(lineas))
 									.thenReturn(new OrderCreatedResponse(o.getId(), total, o.getStatus())));
@@ -83,6 +84,7 @@ public class OrderCheckoutService {
 					item.setProductId(l.product().getId());
 					item.setQuantity(l.cantidad());
 					item.setUnitPrice(l.product().getPrice());
+					item.markNewRow();
 					return orderItemRepository.save(item);
 				})
 				.then();

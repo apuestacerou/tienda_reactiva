@@ -31,15 +31,17 @@ public class JwtService {
 		this.expirationMs = expirationMs;
 	}
 
-	public String createToken(UUID userId, String email) {
+	public String createToken(UUID userId, String email, String role) {
 		Instant now = Instant.now();
-		return Jwts.builder()
+		var builder = Jwts.builder()
 				.subject(userId.toString())
 				.claim("email", email)
 				.issuedAt(Date.from(now))
-				.expiration(Date.from(now.plusMillis(expirationMs)))
-				.signWith(key)
-				.compact();
+				.expiration(Date.from(now.plusMillis(expirationMs)));
+		if (role != null && !role.isBlank()) {
+			builder.claim("role", role);
+		}
+		return builder.signWith(key).compact();
 	}
 
 	public Claims parseValid(String token) {

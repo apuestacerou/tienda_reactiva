@@ -1,13 +1,19 @@
 -- Ejecutar en Neon si aún no tienes usuarios y pedidos (además de products).
+--
+-- Si el registro de usuarios falla y en Neon tienes Row Level Security (RLS) en `users`,
+-- o no hay política que permita INSERT al rol de la conexión, desactívalo o añade políticas:
+--   ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+-- (solo si tu modelo de seguridad lo permite; en muchas apps el backend usa un rol con acceso completo.)
 
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
-    role VARCHAR(20) NOT NULL DEFAULT 'CUSTOMER',
+    role VARCHAR(20) NOT NULL DEFAULT 'CLIENTE',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT ck_users_role CHECK (role IN ('CUSTOMER', 'ADMIN'))
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT ck_users_role CHECK (role IN ('CLIENTE', 'ADMINISTRADOR'))
 );
 
 CREATE TABLE IF NOT EXISTS orders (

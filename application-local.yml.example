@@ -1,0 +1,11 @@
+# Copiar a: application-local.yml (misma carpeta que pom.xml)
+# Ese archivo NO se sube a git (.gitignore).
+#
+# En Neon: Connection details → elige el host del pooler (IPv4) y la base (p. ej. neondb).
+# La URL del panel suele ser jdbc:postgresql://... — aquí debe ser r2dbc:postgresql://HOST:5432/DB?sslmode=require
+
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://TU_HOST_POOLER.neon.tech:5432/neondb?sslmode=require
+    username: neondb_owner
+    password: PEGA_AQUI_TU_CONTRASENA

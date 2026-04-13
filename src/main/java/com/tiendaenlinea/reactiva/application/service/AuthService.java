@@ -1,5 +1,6 @@
 package com.tiendaenlinea.reactiva.application.service;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -10,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.tiendaenlinea.reactiva.application.dto.auth.AuthResponse;
 import com.tiendaenlinea.reactiva.application.dto.auth.LoginRequest;
 import com.tiendaenlinea.reactiva.application.dto.auth.RegisterRequest;
+import com.tiendaenlinea.reactiva.domain.model.UserRole;
 import com.tiendaenlinea.reactiva.infrastructure.persistence.UserEntity;
 import com.tiendaenlinea.reactiva.infrastructure.persistence.UserR2dbcRepository;
 import com.tiendaenlinea.reactiva.infrastructure.security.JwtService;
@@ -32,28 +34,39 @@ public class AuthService {
 	public Mono<AuthResponse> register(RegisterRequest req) {
 		String email = req.email().trim().toLowerCase();
 		return userRepository.findByEmail(email)
-				.flatMap(u -> Mono.<AuthResponse>error(
-						new ResponseStatusException(HttpStatus.CONFLICT, "Email ya registrado")))
-				.switchIfEmpty(Mono.defer(() -> {
+				.hasElement()
+				.flatMap(exists -> {
+					if (Boolean.TRUE.equals(exists)) {
+						return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Email ya registrado"));
+					}
+					Instant now = Instant.now();
 					UserEntity e = new UserEntity();
 					e.setId(UUID.randomUUID());
 					e.setEmail(email);
 					e.setPasswordHash(passwordEncoder.encode(req.password()));
 					e.setFullName(req.fullName() != null ? req.fullName() : "");
-					e.setRole("CUSTOMER");
+					e.setRole(UserRole.defaultRegistrationRole());
+					e.setCreatedAt(now);
+					e.setUpdatedAt(now);
+					e.markNewRow();
 					return userRepository.save(e)
 							.map(u -> new AuthResponse(
-									jwtService.createToken(u.getId(), u.getEmail()),
+									jwtService.createToken(u.getId(), u.getEmail(), u.getRole()),
 									u.getId(),
-									u.getEmail()));
-				}));
+									u.getEmail(),
+									u.getRole()));
+				});
 	}
 
 	public Mono<AuthResponse> login(LoginRequest req) {
 		String email = req.email().trim().toLowerCase();
 		return userRepository.findByEmail(email)
 				.filter(u -> passwordEncoder.matches(req.password(), u.getPasswordHash()))
-				.map(u -> new AuthResponse(jwtService.createToken(u.getId(), u.getEmail()), u.getId(), u.getEmail()))
+				.map(u -> new AuthResponse(
+						jwtService.createToken(u.getId(), u.getEmail(), u.getRole()),
+						u.getId(),
+						u.getEmail(),
+						u.getRole()))
 				.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales invalidas")));
 	}
 }

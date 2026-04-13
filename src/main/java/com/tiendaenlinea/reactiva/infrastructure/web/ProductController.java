@@ -57,12 +57,14 @@ public class ProductController {
 			@RequestPart(value = "description", required = false) String description,
 			@RequestPart("price") String priceStr,
 			@RequestPart("stock") String stockStr,
+			@RequestPart(value = "categoryId", required = false) String categoryIdStr,
 			@RequestPart(value = "image", required = false) FilePart image) {
 		CreateProductCommand cmd = new CreateProductCommand(
 				name,
 				description != null ? description : "",
 				new BigDecimal(priceStr.trim()),
-				Integer.parseInt(stockStr.trim()));
+				Integer.parseInt(stockStr.trim()),
+				parseCategoryId(categoryIdStr));
 		validar(cmd);
 		Mono<byte[]> imagen = image != null ? toBytes(image) : Mono.empty();
 		String nombreArchivo = image != null ? image.filename() : "";
@@ -76,12 +78,14 @@ public class ProductController {
 			@RequestPart(value = "description", required = false) String description,
 			@RequestPart("price") String priceStr,
 			@RequestPart("stock") String stockStr,
+			@RequestPart(value = "categoryId", required = false) String categoryIdStr,
 			@RequestPart(value = "image", required = false) FilePart image) {
 		UpdateProductCommand cmd = new UpdateProductCommand(
 				name,
 				description != null ? description : "",
 				new BigDecimal(priceStr.trim()),
-				Integer.parseInt(stockStr.trim()));
+				Integer.parseInt(stockStr.trim()),
+				parseCategoryId(categoryIdStr));
 		validar(cmd);
 		Mono<byte[]> imagen = image != null ? toBytes(image) : Mono.empty();
 		String nombreArchivo = image != null ? image.filename() : "";
@@ -91,6 +95,17 @@ public class ProductController {
 	@DeleteMapping("/{id}")
 	public Mono<ResponseEntity<Void>> eliminar(@PathVariable UUID id) {
 		return productService.eliminar(id).then(Mono.just(ResponseEntity.noContent().build()));
+	}
+
+	private static UUID parseCategoryId(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return null;
+		}
+		try {
+			return UUID.fromString(raw.trim());
+		} catch (IllegalArgumentException ex) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "categoryId invalido");
+		}
 	}
 
 	private void validar(Object cmd) {

@@ -21,7 +21,13 @@ public class ProductRepositoryAdapter implements ProductRepositoryPort {
 
 	@Override
 	public Mono<Product> save(Product product) {
-		return r2dbc.save(toEntity(product)).map(this::toDomain);
+		return r2dbc.existsById(product.getId()).flatMap(exists -> {
+			ProductEntity e = toEntity(product);
+			if (!exists) {
+				e.markNewRow();
+			}
+			return r2dbc.save(e);
+		}).map(this::toDomain);
 	}
 
 	@Override
@@ -47,6 +53,7 @@ public class ProductRepositoryAdapter implements ProductRepositoryPort {
 		e.setPrice(p.getPrice());
 		e.setStock(p.getStock());
 		e.setImagePath(p.getImagePath());
+		e.setCategoryId(p.getCategoryId());
 		return e;
 	}
 
@@ -57,6 +64,7 @@ public class ProductRepositoryAdapter implements ProductRepositoryPort {
 				e.getDescription(),
 				e.getPrice(),
 				e.getStock(),
-				e.getImagePath());
+				e.getImagePath(),
+				e.getCategoryId());
 	}
 }

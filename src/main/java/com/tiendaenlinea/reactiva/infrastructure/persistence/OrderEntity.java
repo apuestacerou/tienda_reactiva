@@ -5,16 +5,27 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("orders")
-public class OrderEntity {
+public class OrderEntity implements Persistable<UUID> {
 
 	@Id
+	@Column("id")
 	private UUID id;
+
+	@Transient
+	private boolean newRow;
+	@Column("user_id")
 	private UUID userId;
+	@Column("status")
 	private String status;
+	@Column("total_amount")
 	private BigDecimal totalAmount;
+	@Column("created_at")
 	private Instant createdAt;
 
 	public UUID getId() {
@@ -23,6 +34,15 @@ public class OrderEntity {
 
 	public void setId(UUID id) {
 		this.id = id;
+	}
+
+	public void markNewRow() {
+		this.newRow = true;
+	}
+
+	@Override
+	public boolean isNew() {
+		return newRow;
 	}
 
 	public UUID getUserId() {
