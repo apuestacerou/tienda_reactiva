@@ -1,0 +1,228 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "Tienda Reactiva API",
+		"description": "Colección para la API REST (Spring WebFlux) en http://localhost:8080.\n\n**Antes de usar Admin:** ejecuta **Auth > Login** con un usuario ADMINISTRADOR; el token se guarda en la variable `token`.\n\n**Variables de colección:** `baseUrl`, `token`, `productId`, `categoryId` (rellena las últimas según tus datos o respuestas).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "token", "value": "" },
+		{ "key": "productId", "value": "" },
+		{ "key": "categoryId", "value": "" }
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"cliente@ejemplo.com\",\n  \"password\": \"clave12345\",\n  \"fullName\": \"Nombre Apellido\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/register",
+						"description": "Registro (contraseña mín. 8 caracteres). Rol por defecto CLIENTE."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    try {",
+									"        var j = pm.response.json();",
+									"        if (j.token) {",
+									"            pm.collectionVariables.set('token', j.token);",
+									"            console.log('Variable token actualizada');",
+									"        }",
+									"    } catch (e) { console.warn(e); }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@ejemplo.com\",\n  \"password\": \"tu_contraseña\"\n}"
+						},
+						"url": "{{baseUrl}}/api/auth/login",
+						"description": "Devuelve JWT. El script guarda `token` en variables de colección. Usuario debe ser ADMINISTRADOR en Neon para rutas de productos (POST/PUT/DELETE)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Catálogo público",
+			"item": [
+				{
+					"name": "Listar productos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/products"
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener producto por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/products/{{productId}}",
+						"description": "Define `productId` en variables de colección (UUID)."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar categorías",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    try {",
+									"        var arr = pm.response.json();",
+									"        if (Array.isArray(arr) && arr.length > 0 && arr[0].id) {",
+									"            pm.collectionVariables.set('categoryId', arr[0].id);",
+									"            console.log('categoryId = primera categoría:', arr[0].id);",
+									"        }",
+									"    } catch (e) { }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/categories",
+						"description": "Opcional: el script guarda la primera categoría en `categoryId`."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin — productos",
+			"item": [
+				{
+					"name": "Crear producto (multipart)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    try {",
+									"        var j = pm.response.json();",
+									"        if (j.id) pm.collectionVariables.set('productId', j.id);",
+									"    } catch (e) { }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{ "key": "name", "value": "Producto Postman", "type": "text" },
+								{ "key": "description", "value": "Creado desde la colección", "type": "text" },
+								{ "key": "price", "value": "25000", "type": "text" },
+								{ "key": "stock", "value": "5", "type": "text" },
+								{ "key": "categoryId", "value": "{{categoryId}}", "type": "text", "description": "Vacío si no usas categoría" },
+								{ "key": "image", "type": "file", "src": [], "description": "Opcional: elige archivo en Postman" }
+							]
+						},
+						"url": "{{baseUrl}}/api/products",
+						"description": "Requiere rol ADMINISTRADOR. Campos como en Swagger (multipart). Tras éxito guarda `productId`."
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar producto (multipart)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{ "key": "name", "value": "Producto actualizado", "type": "text" },
+								{ "key": "description", "value": "Editado desde Postman", "type": "text" },
+								{ "key": "price", "value": "30000", "type": "text" },
+								{ "key": "stock", "value": "10", "type": "text" },
+								{ "key": "categoryId", "value": "{{categoryId}}", "type": "text" },
+								{ "key": "image", "type": "file", "src": [], "description": "Opcional" }
+							]
+						},
+						"url": "{{baseUrl}}/api/products/{{productId}}",
+						"description": "Define `productId` (o créalo antes con Crear producto)."
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar producto",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": "{{baseUrl}}/api/products/{{productId}}"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Pedidos",
+			"item": [
+				{
+					"name": "Crear pedido",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    { \"productId\": \"{{productId}}\", \"quantity\": 1 }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/api/orders",
+						"description": "Cliente autenticado. Ajusta productId y quantity."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

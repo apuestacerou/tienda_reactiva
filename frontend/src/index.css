@@ -233,3 +233,44 @@ main {
 .btn-danger:hover {
   filter: brightness(1.05);
 }
+
+.admin-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.admin-dashboard-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border: 2px solid transparent;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.admin-dashboard-link:hover {
+  border-color: #1565c0;
+  box-shadow: 0 2px 8px rgba(21, 101, 192, 0.15);
+}
+
+.admin-dashboard-link h3 {
+  margin: 0 0 0.5rem;
+  color: #1565c0;
+}
+
+.admin-dashboard-link p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.admin-back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}

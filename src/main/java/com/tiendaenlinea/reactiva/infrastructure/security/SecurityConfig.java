@@ -39,6 +39,7 @@ public class SecurityConfig {
 				.securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
 				.authorizeExchange(ex -> ex
 						.pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+						.pathMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/webjars/**").permitAll()
 						.pathMatchers("/api/auth/**").permitAll()
 						.pathMatchers(HttpMethod.GET, "/api/products/**").permitAll()
 						.pathMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
