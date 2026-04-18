@@ -18,6 +18,7 @@ export function AdminDashboardPage() {
           <h3>Productos creados</h3>
           <p>Ver el listado, editar datos o imágenes y eliminar productos del catálogo.</p>
         </Link>
+        <Link to="/admin/users">Usuarios</Link>
       </div>
     </RequireAdmin>
   )

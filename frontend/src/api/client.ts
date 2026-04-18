@@ -107,3 +107,33 @@ export async function createOrder(
   if (!r.ok) throw new Error(await readError(r))
   return r.json() as Promise<{ orderId: string; totalAmount: number; status: string }>
 }
+
+// ---------------------- FUNCIONES DE APIS PARA LOS USUSARIOS
+//para mostrar usuarios
+export async function fetchUsers() {
+  const r=await fetch('api/users')
+  if (!r.ok)throw new Error('No se pudieron cargar los usuarios')
+    return r.json()
+}
+// para buscar usuarios por el id
+export async function fetchUsersById(id:string) {
+  const r=await fetch(`/api/users/${id}`)
+  if (!r.ok)throw new Error('Usuario no encontrado')
+    return r.json()
+}
+//para buscar usuarios por el nombre
+export async function serchUsersByName(name:string) {
+  const r=await fetch(`/api/users/search?name=${encodeURIComponent(name)}`)
+  if (!r.ok)throw new Error('Error buscando usuarios')
+    return r.json()
+}
+//para actualizar al usuario por medio del id
+export async function updateUser(id:string, data:any) {
+  const r=await fetch(`/api/users/${id}`,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data),
+  })
+  if (!r.ok)throw new Error('Error actualizando usuario')
+    return r.json()
+}
