@@ -122,7 +122,7 @@ export async function fetchUsersById(id:string) {
     return r.json()
 }
 //para buscar usuarios por el nombre
-export async function serchUsersByName(name:string) {
+export async function searchUsersByName(name:string) {
   const r=await fetch(`/api/users/search?name=${encodeURIComponent(name)}`)
   if (!r.ok)throw new Error('Error buscando usuarios')
     return r.json()
