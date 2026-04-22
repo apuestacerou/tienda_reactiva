@@ -17,6 +17,8 @@ export function AdminProductListPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingProduct, setEditingProduct] = useState<ProductResponse | null>(null)
+  const [search, setSearch] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -54,6 +56,13 @@ export function AdminProductListPage() {
     }
   }
 
+  // Filtrar por nombre y categoría
+  const filteredProducts = products.filter((p) => {
+    const matchName = p.name.toLowerCase().includes(search.toLowerCase())
+    const matchCategory = selectedCategory === '' || p.categoryName === selectedCategory
+    return matchName && matchCategory
+  })
+
   return (
     <RequireAdmin>
       <Link to="/admin" className="admin-back">
@@ -66,6 +75,40 @@ export function AdminProductListPage() {
       </p>
 
       {error && <p className="alert">{error}</p>}
+
+      {/* Filtros de búsqueda */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            border: '1px solid #ccc',
+            fontSize: '1rem',
+            minWidth: '200px'
+          }}
+        />
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            border: '1px solid #ccc',
+            fontSize: '1rem'
+          }}
+        >
+          <option value="">Todas las categorías</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.name}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {editingProduct && (
         <AdminProductForm
@@ -80,11 +123,11 @@ export function AdminProductListPage() {
       )}
 
       <section>
-        <h3>Catálogo ({products.length})</h3>
+        <h3>Catálogo ({filteredProducts.length})</h3>
         {loading ? (
           <p>Cargando…</p>
-        ) : products.length === 0 ? (
-          <p>No hay productos. <Link to="/admin/nuevo">Crea el primero</Link>.</p>
+        ) : filteredProducts.length === 0 ? (
+          <p>No hay productos que coincidan con la búsqueda.</p>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -99,7 +142,7 @@ export function AdminProductListPage() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {filteredProducts.map((p) => (
                   <tr key={p.id}>
                     <td>
                       {p.imageUrl ? (
