@@ -8,6 +8,7 @@ import { CheckoutPage } from './pages/CheckoutPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminProductListPage } from './pages/AdminProductListPage'
 import { AdminProductNewPage } from './pages/AdminProductNewPage'
+import { AdminUserPage } from './pages/AdminUserPage'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/admin" element={<AdminDashboardPage />} />
         <Route path="/admin/nuevo" element={<AdminProductNewPage />} />
         <Route path="/admin/productos" element={<AdminProductListPage />} />
+        <Route path="/admin/users"element={<AdminUserPage />}/>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

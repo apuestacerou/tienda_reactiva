@@ -4,6 +4,8 @@ spring:
   # Solo Neon (PostgreSQL R2DBC). Sin H2 ni base en memoria.
   # Credenciales: application-local.yml junto al pom.xml (plantilla: application-local.yml.example).
   config:
+    activate:
+      on-profile: local 
     import: optional:file:./application-local.yml
 
 server:
