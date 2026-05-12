@@ -7,6 +7,10 @@ spring:
     activate:
       on-profile: local 
     import: optional:file:./application-local.yml
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 server:
   port: 8080
@@ -24,4 +28,6 @@ tienda:
   public-files-base: /api/files
   jwt:
     secret: ${TIENDA_JWT_SECRET:esta-clave-secreta-debe-tener-al-menos-32-bytes-para-hs256-seguro}
-    expiration-ms: 86400000
+    # Access JWT (corta duración). Refresh opaco en Redis con prefijos refresh: y user_token:
+    expiration-ms: ${TIENDA_JWT_EXPIRATION_MS:900000}
+    refresh-expiration-ms: ${TIENDA_JWT_REFRESH_EXPIRATION_MS:604800000}

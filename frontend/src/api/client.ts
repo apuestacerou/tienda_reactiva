@@ -44,6 +44,25 @@ export async function login(email: string, password: string): Promise<AuthRespon
   return r.json()
 }
 
+export async function refreshAuth(refreshToken: string): Promise<AuthResponse> {
+  const r = await fetch('/api/auth/refresh', {
+    method: 'POST',
+    headers: JSON_HDR,
+    body: JSON.stringify({ refreshToken }),
+  })
+  if (!r.ok) throw new Error(await readError(r))
+  return r.json()
+}
+
+export async function logout(refreshToken: string): Promise<void> {
+  const r = await fetch('/api/auth/logout', {
+    method: 'POST',
+    headers: JSON_HDR,
+    body: JSON.stringify({ refreshToken }),
+  })
+  if (!r.ok && r.status !== 204) throw new Error(await readError(r))
+}
+
 export async function adminCreateProduct(
   token: string,
   fields: { name: string; description: string; price: number; stock: number; categoryId?: string | null },

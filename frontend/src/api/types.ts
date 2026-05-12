@@ -17,6 +17,7 @@ export interface CategoryResponse {
 
 export interface AuthResponse {
   token: string
+  refreshToken: string
   userId: string
   email: string
   /** CLIENTE | ADMINISTRADOR (según Neon / registro) */
