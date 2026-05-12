@@ -1,5 +1,5 @@
-# Copiar a: application-local.yml (misma carpeta que pom.xml)
-# Ese archivo NO se sube a git (.gitignore).
+# Plantilla de referencia (misma carpeta que pom.xml).
+# El archivo application-local.yml está versionado; copia estos valores o edítalo con tus credenciales Neon.
 #
 # En Neon: Connection details → elige el host del pooler (IPv4) y la base (p. ej. neondb).
 # La URL del panel suele ser jdbc:postgresql://... — aquí debe ser r2dbc:postgresql://HOST:5432/DB?sslmode=require
