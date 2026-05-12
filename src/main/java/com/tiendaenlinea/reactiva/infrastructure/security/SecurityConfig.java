@@ -3,6 +3,7 @@ package com.tiendaenlinea.reactiva.infrastructure.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
@@ -49,6 +50,17 @@ public class SecurityConfig {
 						.pathMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMINISTRADOR")
 						.pathMatchers(HttpMethod.POST, "/api/orders").authenticated()
 						.anyExchange().permitAll())
+				// Sin WWW-Authenticate: Basic: si no, el navegador abre el diálogo nativo de usuario/contraseña
+				// al probar POST en Swagger; el cliente API debe usar Authorization: Bearer (botón Authorize).
+				.exceptionHandling(ex -> ex
+						.authenticationEntryPoint((exchange, authEx) -> {
+							exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+							return exchange.getResponse().setComplete();
+						})
+						.accessDeniedHandler((exchange, denied) -> {
+							exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+							return exchange.getResponse().setComplete();
+						}))
 				.addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION)
 				.build();
 	}
