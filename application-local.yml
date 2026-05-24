@@ -6,9 +6,9 @@
 
 spring:
   r2dbc:
-    url: r2dbc:postgresql://TU_HOST_POOLER.neon.tech:5432/neondb?sslmode=require
+    url: r2dbc:postgresql://ep-odd-sky-amlmkm1v-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
     username: neondb_owner
-    password: PEGA_AQUI_TU_CONTRASENA
+    password: npg_95GHJCZwSeqm
   data:
     redis:
       host: localhost
