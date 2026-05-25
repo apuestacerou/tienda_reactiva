@@ -9,6 +9,13 @@ import reactor.core.publisher.Flux;
 
 public interface ProductR2dbcRepository extends ReactiveCrudRepository<ProductEntity, UUID> {
 
-	@Query("SELECT * FROM products ORDER BY name ASC")
-	Flux<ProductEntity> findAllOrderByName();
+    @Query("SELECT * FROM products ORDER BY name ASC")
+    Flux<ProductEntity> findAllOrderByName();
+
+    @Query("""
+        SELECT *
+        FROM products
+        WHERE stock <= 0
+    """)
+    Flux<ProductEntity> findOutOfStockProducts();
 }
