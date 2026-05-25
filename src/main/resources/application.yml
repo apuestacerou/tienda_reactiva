@@ -2,7 +2,8 @@ spring:
   application:
     name: reactiva
   # Solo Neon (PostgreSQL R2DBC). Sin H2 ni base en memoria.
-  # Credenciales: application-local.yml junto al pom.xml (plantilla: application-local.yml.example).
+  # Credenciales: application-local.yml junto al pom.xml (NO aquí; este archivo va a git).
+  # Formato R2DBC: r2dbc:postgresql://HOST_POOLER:5432/neondb?sslmode=require + username/password aparte.
   config:
     activate:
       on-profile: local 

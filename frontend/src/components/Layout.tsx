@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isAdmin, email, logout } = useAuth()
+  const { count } = useCart()
 
   return (
     <>
@@ -14,7 +16,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </h1>
         <nav>
           <Link to="/">Catálogo</Link>
-          <Link to="/cart">Carrito</Link>
+          <Link to="/cart">
+            Carrito{count > 0 ? ` (${count})` : ''}
+          </Link>
           {isAdmin && (
             <Link to="/admin" style={{ fontWeight: 700 }}>
               Administración

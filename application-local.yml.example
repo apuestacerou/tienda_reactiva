@@ -1,16 +1,16 @@
-# Plantilla de referencia (misma carpeta que pom.xml).
-# El archivo application-local.yml está versionado; copia estos valores o edítalo con tus credenciales Neon.
+# Copiar a application-local.yml (junto al pom.xml). Ese archivo no va a git.
 #
-# En Neon: Connection details → elige el host del pooler (IPv4) y la base (p. ej. neondb).
-# La URL del panel suele ser jdbc:postgresql://... — aquí debe ser r2dbc:postgresql://HOST:5432/DB?sslmode=require
+# Neon: r2dbc:postgresql://HOST_POOLER.neon.tech:5432/neondb?sslmode=require
+# Redis Cloud: host, puerto, usuario default y contraseña del panel Conectar
 
 spring:
   r2dbc:
     url: r2dbc:postgresql://TU_HOST_POOLER.neon.tech:5432/neondb?sslmode=require
     username: neondb_owner
-    password: PEGA_AQUI_TU_CONTRASENA
-  # Redis: refresh tokens (prefijos refresh: y user_token:). Local: docker run -d -p 6379:6379 redis:7-alpine
+    password: PEGA_AQUI_TU_CONTRASENA_NEON
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: TU_HOST.db.redis.io
+      port: 11700
+      username: default
+      password: PEGA_AQUI_TU_PASSWORD_REDIS

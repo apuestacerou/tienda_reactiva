@@ -1,183 +1,146 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { adminDeleteProduct, fetchCategories, fetchProducts } from '../api/client'
+import { FormEvent, useEffect, useState } from 'react'
+import { adminCreateProduct, adminUpdateProduct } from '../api/client'
 import type { CategoryResponse, ProductResponse } from '../api/types'
-import { AdminProductForm } from '../components/AdminProductForm'
-import { RequireAdmin } from '../components/RequireAdmin'
 import { useAuth } from '../context/AuthContext'
 
-function money(n: number) {
-  return n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
+type Props = {
+  /** null = alta nueva; con valor = edición */
+  editingProduct: ProductResponse | null
+  categories: CategoryResponse[]
+  onCancelEdit?: () => void
+  onSaved: () => void | Promise<void>
 }
 
-export function AdminProductListPage() {
+export function AdminProductForm({ editingProduct, categories, onCancelEdit, onSaved }: Props) {
   const { token } = useAuth()
-  const [products, setProducts] = useState<ProductResponse[]>([])
-  const [categories, setCategories] = useState<CategoryResponse[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [editingProduct, setEditingProduct] = useState<ProductResponse | null>(null)
-  const [search, setSearch] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [price, setPrice] = useState('')
+  const [stock, setStock] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [image, setImage] = useState<File | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const list = await fetchProducts()
-      setProducts(list)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al cargar productos')
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (editingProduct) {
+      setName(editingProduct.name)
+      setDescription(editingProduct.description ?? '')
+      setPrice(String(editingProduct.price))
+      setStock(String(editingProduct.stock))
+      setCategoryId(editingProduct.categoryId ?? '')
+    } else {
+      setName('')
+      setDescription('')
+      setPrice('')
+      setStock('')
+      setCategoryId('')
     }
-  }, [])
+    setImage(null)
+    setFormError(null)
+  }, [editingProduct])
 
-  useEffect(() => {
-    load()
-  }, [load])
-
-  useEffect(() => {
-    fetchCategories()
-      .then(setCategories)
-      .catch(() => setCategories([]))
-  }, [])
-
-  async function onDelete(id: string, nombre: string) {
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
     if (!token) return
-    if (!window.confirm(`¿Eliminar el producto «${nombre}»?`)) return
-    setError(null)
+    setFormError(null)
+    const priceNum = Number(price)
+    const stockNum = parseInt(stock, 10)
+    if (!name.trim()) {
+      setFormError('El nombre es obligatorio')
+      return
+    }
+    if (Number.isNaN(priceNum) || priceNum < 0) {
+      setFormError('Precio inválido')
+      return
+    }
+    if (Number.isNaN(stockNum) || stockNum < 0) {
+      setFormError('Stock inválido')
+      return
+    }
+    setSaving(true)
     try {
-      await adminDeleteProduct(token, id)
-      if (editingProduct?.id === id) setEditingProduct(null)
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo eliminar')
+      const fields = {
+        name: name.trim(),
+        description: description.trim(),
+        price: priceNum,
+        stock: stockNum,
+        categoryId: categoryId || null,
+      }
+      if (editingProduct) {
+        await adminUpdateProduct(token, editingProduct.id, fields, image)
+      } else {
+        await adminCreateProduct(token, fields, image)
+      }
+      await onSaved()
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setSaving(false)
     }
   }
 
-  // Filtrar por nombre y categoría
-  const filteredProducts = products.filter((p) => {
-    const matchName = p.name.toLowerCase().includes(search.toLowerCase())
-    const matchCategory = selectedCategory === '' || p.categoryName === selectedCategory
-    return matchName && matchCategory
-  })
+  const isEdit = Boolean(editingProduct)
 
   return (
-    <RequireAdmin>
-      <Link to="/admin" className="admin-back">
-        ← Volver al panel
-      </Link>
-      <h2>Productos creados</h2>
-      <p style={{ marginTop: 0, opacity: 0.85 }}>
-        Listado del catálogo. Para dar de alta uno nuevo usa{' '}
-        <Link to="/admin/nuevo">Crear producto</Link>.
-      </p>
-
-      {error && <p className="alert">{error}</p>}
-
-      {/* Filtros de búsqueda */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          placeholder="Buscar por nombre..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            padding: '0.5rem 1rem',
-            borderRadius: '8px',
-            border: '1px solid #ccc',
-            fontSize: '1rem',
-            minWidth: '200px'
-          }}
-        />
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          style={{
-            padding: '0.5rem 1rem',
-            borderRadius: '8px',
-            border: '1px solid #ccc',
-            fontSize: '1rem'
-          }}
-        >
-          <option value="">Todas las categorías</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.name}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {editingProduct && (
-        <AdminProductForm
-          editingProduct={editingProduct}
-          categories={categories}
-          onCancelEdit={() => setEditingProduct(null)}
-          onSaved={async () => {
-            setEditingProduct(null)
-            await load()
-          }}
-        />
-      )}
-
-      <section>
-        <h3>Catálogo ({filteredProducts.length})</h3>
-        {loading ? (
-          <p>Cargando…</p>
-        ) : filteredProducts.length === 0 ? (
-          <p>No hay productos que coincidan con la búsqueda.</p>
-        ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Imagen</th>
-                  <th>Nombre</th>
-                  <th>Categoría</th>
-                  <th>Precio</th>
-                  <th>Stock</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt="" className="admin-thumb" />
-                      ) : (
-                        <span className="admin-no-img">—</span>
-                      )}
-                    </td>
-                    <td>
-                      <strong>{p.name}</strong>
-                      {p.description ? (
-                        <div className="admin-desc">
-                          {p.description.slice(0, 80)}
-                          {p.description.length > 80 ? '…' : ''}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td>{p.categoryName ?? '—'}</td>
-                    <td>{money(p.price)}</td>
-                    <td>{p.stock}</td>
-                    <td className="admin-actions">
-                      <button type="button" className="btn btn-sm" onClick={() => setEditingProduct(p)}>
-                        Editar
-                      </button>
-                      <button type="button" className="btn btn-sm btn-danger" onClick={() => onDelete(p.id, p.name)}>
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </RequireAdmin>
+    <section className="card admin-form-card" style={{ marginBottom: '1.5rem' }}>
+      <h3 style={{ marginTop: 0 }}>{isEdit ? 'Editar producto' : 'Nuevo producto'}</h3>
+      {formError && <p className="alert">{formError}</p>}
+      <form className="form admin-form" onSubmit={onSubmit}>
+        <label>
+          Nombre
+          <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={255} />
+        </label>
+        <label>
+          Descripción
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            style={{ font: 'inherit', padding: '0.5rem', borderRadius: 4, border: '1px solid #ccc' }}
+          />
+        </label>
+        <div className="admin-form-row">
+          <label>
+            Precio
+            <input type="number" min={0} step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required />
+          </label>
+          <label>
+            Stock
+            <input type="number" min={0} step={1} value={stock} onChange={(e) => setStock(e.target.value)} required />
+          </label>
+        </div>
+        <label>
+          Categoría
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            style={{ font: 'inherit', padding: '0.5rem', borderRadius: 4, border: '1px solid #ccc' }}
+          >
+            <option value="">Sin categoría</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Imagen {isEdit ? '(opcional; vacío deja la actual)' : '(opcional)'}
+          <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
+        </label>
+        <div className="admin-form-actions">
+          <button type="submit" className="btn" disabled={saving}>
+            {saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Crear producto'}
+          </button>
+          {isEdit && onCancelEdit && (
+            <button type="button" className="btn btn-secondary" onClick={onCancelEdit} disabled={saving}>
+              Cancelar edición
+            </button>
+          )}
+        </div>
+      </form>
+    </section>
   )
 }
